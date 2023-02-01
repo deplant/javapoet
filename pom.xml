@@ -9,7 +9,7 @@
     <version>7</version>
   </parent>
 
-  <groupId>com.squareup</groupId>
+  <groupId>tech.deplant.tools</groupId>
   <artifactId>javapoet</artifactId>
   <version>1.14.0-SNAPSHOT</version>
 
@@ -19,7 +19,6 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
     <java.version>1.8</java.version>
     <junit.version>4.13.2</junit.version>
     <truth.version>1.1.3</truth.version>
@@ -27,15 +26,15 @@
   </properties>
 
   <scm>
-    <url>http://github.com/square/javapoet/</url>
-    <connection>scm:git:git://github.com/square/javapoet.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/square/javapoet.git</developerConnection>
+    <url>http://github.com/deplant/javapoet/</url>
+    <connection>scm:git:git://github.com/deplant/javapoet.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/deplant/javapoet.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
 
   <issueManagement>
     <system>GitHub Issues</system>
-    <url>http://github.com/square/javapoet/issues</url>
+    <url>http://github.com/deplant/javapoet/issues</url>
   </issueManagement>
 
   <licenses>
@@ -46,8 +45,8 @@
   </licenses>
 
   <organization>
-    <name>Square, Inc.</name>
-    <url>http://squareup.com</url>
+    <name>Deplant</name>
+    <url>http://deplant.tech</url>
   </organization>
 
   <dependencies>
@@ -148,7 +147,7 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <Automatic-Module-Name>com.squareup.javapoet</Automatic-Module-Name>
+              <Automatic-Module-Name>deplant.javapoet</Automatic-Module-Name>
             </manifestEntries>
           </archive>
         </configuration>
