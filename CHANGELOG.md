@@ -1,6 +1,11 @@
 Change Log
 ==========
 
+JavaPoet 2.0.0 *(2023-08-01)*
+-----------------------------
+
+* Breaking change: Minimum version set to JDK 17
+
 JavaPoet 1.13.0 *(2020-06-18)*
 -----------------------------
 

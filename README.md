@@ -890,14 +890,14 @@ Download
 Download [the latest .jar][dl] or depend via Maven:
 ```xml
 <dependency>
-  <groupId>com.squareup</groupId>
+  <groupId>tech.deplant.commons</groupId>
   <artifactId>javapoet</artifactId>
-  <version>1.13.0</version>
+  <version>2.0.0</version>
 </dependency>
 ```
 or Gradle:
 ```groovy
-compile 'com.squareup:javapoet:1.13.0'
+compile 'tech.deplant.commons:javapoet:2.0.0'
 ```
 
 Snapshots of the development version are available in [Sonatype's `snapshots` repository][snap].
