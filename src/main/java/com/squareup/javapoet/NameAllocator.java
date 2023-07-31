@@ -15,14 +15,8 @@
  */
 package com.squareup.javapoet;
 
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 import javax.lang.model.SourceVersion;
-
-import static com.squareup.javapoet.Util.checkNotNull;
+import java.util.*;
 
 /**
  * Assigns Java identifier names to avoid collisions, keywords, and invalid characters. To use,
@@ -31,13 +25,13 @@ import static com.squareup.javapoet.Util.checkNotNull;
  *
  *   NameAllocator nameAllocator = new NameAllocator();
  *   for (MyProperty property : properties) {
- *     nameAllocator.newName(property.name(), property);
+ *     nameAllocator.newName(property.parameterName(), property);
  *   }
  *   nameAllocator.newName("sb", "string builder");
  * }</pre>
- *
- * Pass a unique tag object to each allocation. The tag scopes the name, and can be used to look up
- * the allocated name later. Typically the tag is the object that is being named. In the above
+ * <p>
+ * Pass a unique tag object to each allocation. The tag scopes the parameterName, and can be used to look up
+ * the allocated parameterName later. Typically the tag is the object that is being named. In the above
  * example we use {@code property} for the user-supplied property names, and {@code "string
  * builder"} for our constant string builder.
  *
@@ -57,7 +51,7 @@ import static com.squareup.javapoet.Util.checkNotNull;
  *   builder.addStatement("return $N", nameAllocator.get("string builder"));
  *   return builder.build();
  * }</pre>
- *
+ * <p>
  * The above code generates unique names if presented with conflicts. Given user-supplied properties
  * with names {@code ab} and {@code sb} this generates the following:  <pre>   {@code
  *
@@ -69,100 +63,102 @@ import static com.squareup.javapoet.Util.checkNotNull;
  *     return sb_.toString();
  *   }
  * }</pre>
- *
+ * <p>
  * The underscore is appended to {@code sb} to avoid conflicting with the user-supplied {@code sb}
  * property. Underscores are also prefixed for names that start with a digit, and used to replace
- * name-unsafe characters like space or dash.
+ * parameterName-unsafe characters like space or dash.
  *
  * <p>When dealing with multiple independent inner scopes, use a {@link #clone()} of the
- * NameAllocator used for the outer scope to further refine name allocation for a specific inner
+ * NameAllocator used for the outer scope to further refine parameterName allocation for a specific inner
  * scope.
  */
 public final class NameAllocator implements Cloneable {
-  private final Set<String> allocatedNames;
-  private final Map<Object, String> tagToName;
+	private final Set<String> allocatedNames;
+	private final Map<Object, String> tagToName;
 
-  public NameAllocator() {
-    this(new LinkedHashSet<>(), new LinkedHashMap<>());
-  }
+	public NameAllocator() {
+		this(new LinkedHashSet<>(), new LinkedHashMap<>());
+	}
 
-  private NameAllocator(LinkedHashSet<String> allocatedNames,
-                        LinkedHashMap<Object, String> tagToName) {
-    this.allocatedNames = allocatedNames;
-    this.tagToName = tagToName;
-  }
+	private NameAllocator(LinkedHashSet<String> allocatedNames,
+	                      LinkedHashMap<Object, String> tagToName) {
+		this.allocatedNames = allocatedNames;
+		this.tagToName = tagToName;
+	}
 
-  /**
-   * Return a new name using {@code suggestion} that will not be a Java identifier or clash with
-   * other names.
-   */
-  public String newName(String suggestion) {
-    return newName(suggestion, UUID.randomUUID().toString());
-  }
+	public static String toJavaIdentifier(String suggestion) {
+		StringBuilder result = new StringBuilder();
+		for (int i = 0; i < suggestion.length(); ) {
+			int codePoint = suggestion.codePointAt(i);
+			if (i == 0
+			    && !Character.isJavaIdentifierStart(codePoint)
+			    && Character.isJavaIdentifierPart(codePoint)) {
+				result.append("_");
+			}
 
-  /**
-   * Return a new name using {@code suggestion} that will not be a Java identifier or clash with
-   * other names. The returned value can be queried multiple times by passing {@code tag} to
-   * {@link #get(Object)}.
-   */
-  public String newName(String suggestion, Object tag) {
-    checkNotNull(suggestion, "suggestion");
-    checkNotNull(tag, "tag");
+			int validCodePoint = Character.isJavaIdentifierPart(codePoint) ? codePoint : '_';
+			result.appendCodePoint(validCodePoint);
+			i += Character.charCount(codePoint);
+		}
+		return result.toString();
+	}
 
-    suggestion = toJavaIdentifier(suggestion);
+	/**
+	 * Return a new parameterName using {@code suggestion} that will not be a Java identifier or clash with
+	 * other names.
+	 */
+	public String newName(String suggestion) {
+		return newName(suggestion, UUID.randomUUID().toString());
+	}
 
-    while (SourceVersion.isKeyword(suggestion) || !allocatedNames.add(suggestion)) {
-      suggestion = suggestion + "_";
-    }
+	/**
+	 * Return a new parameterName using {@code suggestion} that will not be a Java identifier or clash with
+	 * other names. The returned value can be queried multiple times by passing {@code tag} to
+	 * {@link #get(Object)}.
+	 */
+	public String newName(String suggestion, Object tag) {
+		Util.checkNotNull(suggestion, "suggestion");
+		Util.checkNotNull(tag, "tag");
 
-    String replaced = tagToName.put(tag, suggestion);
-    if (replaced != null) {
-      tagToName.put(tag, replaced); // Put things back as they were!
-      throw new IllegalArgumentException("tag " + tag + " cannot be used for both '" + replaced
-          + "' and '" + suggestion + "'");
-    }
+		suggestion = toJavaIdentifier(suggestion);
 
-    return suggestion;
-  }
+		while (SourceVersion.isKeyword(suggestion) || !this.allocatedNames.add(suggestion)) {
+			suggestion = suggestion + "_";
+		}
 
-  public static String toJavaIdentifier(String suggestion) {
-    StringBuilder result = new StringBuilder();
-    for (int i = 0; i < suggestion.length(); ) {
-      int codePoint = suggestion.codePointAt(i);
-      if (i == 0
-          && !Character.isJavaIdentifierStart(codePoint)
-          && Character.isJavaIdentifierPart(codePoint)) {
-        result.append("_");
-      }
+		String replaced = this.tagToName.put(tag, suggestion);
+		if (replaced != null) {
+			this.tagToName.put(tag, replaced); // Put things back as they were!
+			throw new IllegalArgumentException("tag " + tag + " cannot be used for both '" + replaced
+			                                   + "' and '" + suggestion + "'");
+		}
 
-      int validCodePoint = Character.isJavaIdentifierPart(codePoint) ? codePoint : '_';
-      result.appendCodePoint(validCodePoint);
-      i += Character.charCount(codePoint);
-    }
-    return result.toString();
-  }
+		return suggestion;
+	}
 
-  /** Retrieve a name created with {@link #newName(String, Object)}. */
-  public String get(Object tag) {
-    String result = tagToName.get(tag);
-    if (result == null) {
-      throw new IllegalArgumentException("unknown tag: " + tag);
-    }
-    return result;
-  }
+	/**
+	 * Retrieve a parameterName created with {@link #newName(String, Object)}.
+	 */
+	public String get(Object tag) {
+		String result = this.tagToName.get(tag);
+		if (result == null) {
+			throw new IllegalArgumentException("unknown tag: " + tag);
+		}
+		return result;
+	}
 
-  /**
-   * Create a deep copy of this NameAllocator. Useful to create multiple independent refinements
-   * of a NameAllocator to be used in the respective definition of multiples, independently-scoped,
-   * inner code blocks.
-   *
-   * @return A deep copy of this NameAllocator.
-   */
-  @Override
-  public NameAllocator clone() {
-    return new NameAllocator(
-        new LinkedHashSet<>(this.allocatedNames),
-        new LinkedHashMap<>(this.tagToName));
-  }
+	/**
+	 * Create a deep copy of this NameAllocator. Useful to create multiple independent refinements
+	 * of a NameAllocator to be used in the respective definition of multiples, independently-scoped,
+	 * inner code blocks.
+	 *
+	 * @return A deep copy of this NameAllocator.
+	 */
+	@Override
+	public NameAllocator clone() {
+		return new NameAllocator(
+				new LinkedHashSet<>(this.allocatedNames),
+				new LinkedHashMap<>(this.tagToName));
+	}
 
 }

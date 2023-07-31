@@ -5,6 +5,8 @@ JavaPoet 2.0.0 *(2023-08-01)*
 -----------------------------
 
 * Breaking change: Minimum version set to JDK 17
+* New: Support of records
+* New: Support of sealed classes
 
 JavaPoet 1.13.0 *(2020-06-18)*
 -----------------------------

@@ -24,148 +24,183 @@ import static com.squareup.javapoet.Util.checkNotNull;
  * or soft-wrapping spaces using {@link #wrappingSpace}.
  */
 final class LineWrapper {
-  private final RecordingAppendable out;
-  private final String indent;
-  private final int columnLimit;
-  private boolean closed;
+	private final RecordingAppendable out;
+	private final String indent;
+	private final int columnLimit;
+	/**
+	 * Characters written since the last wrapping space that haven't yet been flushed.
+	 */
+	private final StringBuilder buffer = new StringBuilder();
+	private boolean closed;
+	/**
+	 * The number of characters since the most recent newline. Includes both out and the buffer.
+	 */
+	private int column = 0;
 
-  /** Characters written since the last wrapping space that haven't yet been flushed. */
-  private final StringBuilder buffer = new StringBuilder();
+	/**
+	 * -1 if we have no buffering; otherwise the number of {@code indent}s to write after wrapping.
+	 */
+	private int indentLevel = -1;
 
-  /** The number of characters since the most recent newline. Includes both out and the buffer. */
-  private int column = 0;
+	/**
+	 * Null if we have no buffering; otherwise the type to pass to the next call to {@link #flush}.
+	 */
+	private FlushType nextFlush;
 
-  /**
-   * -1 if we have no buffering; otherwise the number of {@code indent}s to write after wrapping.
-   */
-  private int indentLevel = -1;
+	LineWrapper(Appendable out, String indent, int columnLimit) {
+		checkNotNull(out, "out == null");
+		this.out = new RecordingAppendable(out);
+		this.indent = indent;
+		this.columnLimit = columnLimit;
+	}
 
-  /**
-   * Null if we have no buffering; otherwise the type to pass to the next call to {@link #flush}.
-   */
-  private FlushType nextFlush;
+	/**
+	 * @return the last emitted char or {@link Character#MIN_VALUE} if nothing emitted yet.
+	 */
+	char lastChar() {
+		return this.out.lastChar;
+	}
 
-  LineWrapper(Appendable out, String indent, int columnLimit) {
-    checkNotNull(out, "out == null");
-    this.out = new RecordingAppendable(out);
-    this.indent = indent;
-    this.columnLimit = columnLimit;
-  }
+	/**
+	 * Emit {@code s}. This may be buffered to permit line wraps to be inserted.
+	 */
+	void append(String s) throws IOException {
+		if (this.closed) {
+			throw new IllegalStateException("closed");
+		}
 
-  /** @return the last emitted char or {@link Character#MIN_VALUE} if nothing emitted yet. */
-  char lastChar() {
-    return out.lastChar;
-  }
+		if (this.nextFlush != null) {
+			int nextNewline = s.indexOf('\n');
 
-  /** Emit {@code s}. This may be buffered to permit line wraps to be inserted. */
-  void append(String s) throws IOException {
-    if (closed) throw new IllegalStateException("closed");
+			// If s doesn't cause the current line to cross the limit, buffer it and return. We'll decide
+			// whether or not we have to wrap it later.
+			if (nextNewline == -1 && this.column + s.length() <= this.columnLimit) {
+				this.buffer.append(s);
+				this.column += s.length();
+				return;
+			}
 
-    if (nextFlush != null) {
-      int nextNewline = s.indexOf('\n');
+			// Wrap if appending s would overflow the current line.
+			boolean wrap = nextNewline == -1 || this.column + nextNewline > this.columnLimit;
+			flush(wrap ? FlushType.WRAP : this.nextFlush);
+		}
 
-      // If s doesn't cause the current line to cross the limit, buffer it and return. We'll decide
-      // whether or not we have to wrap it later.
-      if (nextNewline == -1 && column + s.length() <= columnLimit) {
-        buffer.append(s);
-        column += s.length();
-        return;
-      }
+		this.out.append(s);
+		int lastNewline = s.lastIndexOf('\n');
+		this.column = lastNewline != -1
+				? s.length() - lastNewline - 1
+				: this.column + s.length();
+	}
 
-      // Wrap if appending s would overflow the current line.
-      boolean wrap = nextNewline == -1 || column + nextNewline > columnLimit;
-      flush(wrap ? FlushType.WRAP : nextFlush);
-    }
+	/**
+	 * Emit either a space or a newline character.
+	 */
+	void wrappingSpace(int indentLevel) throws IOException {
+		if (this.closed) {
+			throw new IllegalStateException("closed");
+		}
 
-    out.append(s);
-    int lastNewline = s.lastIndexOf('\n');
-    column = lastNewline != -1
-        ? s.length() - lastNewline - 1
-        : column + s.length();
-  }
+		if (this.nextFlush != null) {
+			flush(this.nextFlush);
+		}
+		this.column++; // Increment the column even though the space is deferred to next call to flush().
+		this.nextFlush = FlushType.SPACE;
+		this.indentLevel = indentLevel;
+	}
 
-  /** Emit either a space or a newline character. */
-  void wrappingSpace(int indentLevel) throws IOException {
-    if (closed) throw new IllegalStateException("closed");
+	/**
+	 * Emit a newline character if the line will exceed it's limit, otherwise do nothing.
+	 */
+	void zeroWidthSpace(int indentLevel) throws IOException {
+		if (this.closed) {
+			throw new IllegalStateException("closed");
+		}
 
-    if (this.nextFlush != null) flush(nextFlush);
-    column++; // Increment the column even though the space is deferred to next call to flush().
-    this.nextFlush = FlushType.SPACE;
-    this.indentLevel = indentLevel;
-  }
+		if (this.column == 0) {
+			return;
+		}
+		if (this.nextFlush != null) {
+			flush(this.nextFlush);
+		}
+		this.nextFlush = FlushType.EMPTY;
+		this.indentLevel = indentLevel;
+	}
 
-  /** Emit a newline character if the line will exceed it's limit, otherwise do nothing. */
-  void zeroWidthSpace(int indentLevel) throws IOException {
-    if (closed) throw new IllegalStateException("closed");
+	/**
+	 * Flush any outstanding text and forbid future writes to this line wrapper.
+	 */
+	void close() throws IOException {
+		if (this.nextFlush != null) {
+			flush(this.nextFlush);
+		}
+		this.closed = true;
+	}
 
-    if (column == 0) return;
-    if (this.nextFlush != null) flush(nextFlush);
-    this.nextFlush = FlushType.EMPTY;
-    this.indentLevel = indentLevel;
-  }
+	/**
+	 * Write the space followed by any buffered text that follows it.
+	 */
+	private void flush(FlushType flushType) throws IOException {
+		switch (flushType) {
+			case WRAP:
+				this.out.append('\n');
+				for (int i = 0; i < this.indentLevel; i++) {
+					this.out.append(this.indent);
+				}
+				this.column = this.indentLevel * this.indent.length();
+				this.column += this.buffer.length();
+				break;
+			case SPACE:
+				this.out.append(' ');
+				break;
+			case EMPTY:
+				break;
+			default:
+				throw new IllegalArgumentException("Unknown FlushType: " + flushType);
+		}
 
-  /** Flush any outstanding text and forbid future writes to this line wrapper. */
-  void close() throws IOException {
-    if (nextFlush != null) flush(nextFlush);
-    closed = true;
-  }
+		this.out.append(this.buffer);
+		this.buffer.delete(0, this.buffer.length());
+		this.indentLevel = -1;
+		this.nextFlush = null;
+	}
 
-  /** Write the space followed by any buffered text that follows it. */
-  private void flush(FlushType flushType) throws IOException {
-    switch (flushType) {
-      case WRAP:
-        out.append('\n');
-        for (int i = 0; i < indentLevel; i++) {
-          out.append(indent);
-        }
-        column = indentLevel * indent.length();
-        column += buffer.length();
-        break;
-      case SPACE:
-        out.append(' ');
-        break;
-      case EMPTY:
-        break;
-      default:
-        throw new IllegalArgumentException("Unknown FlushType: " + flushType);
-    }
+	private enum FlushType {
+		WRAP,
+		SPACE,
+		EMPTY
+	}
 
-    out.append(buffer);
-    buffer.delete(0, buffer.length());
-    indentLevel = -1;
-    nextFlush = null;
-  }
+	/**
+	 * A delegating {@link Appendable} that records info about the chars passing through it.
+	 */
+	static final class RecordingAppendable implements Appendable {
+		private final Appendable delegate;
 
-  private enum FlushType {
-    WRAP, SPACE, EMPTY;
-  }
+		char lastChar = Character.MIN_VALUE;
 
-  /** A delegating {@link Appendable} that records info about the chars passing through it. */
-  static final class RecordingAppendable implements Appendable {
-    private final Appendable delegate;
+		RecordingAppendable(Appendable delegate) {
+			this.delegate = delegate;
+		}
 
-    char lastChar = Character.MIN_VALUE;
+		@Override
+		public Appendable append(CharSequence csq) throws IOException {
+			int length = csq.length();
+			if (length != 0) {
+				this.lastChar = csq.charAt(length - 1);
+			}
+			return this.delegate.append(csq);
+		}
 
-    RecordingAppendable(Appendable delegate) {
-      this.delegate = delegate;
-    }
+		@Override
+		public Appendable append(CharSequence csq, int start, int end) throws IOException {
+			CharSequence sub = csq.subSequence(start, end);
+			return append(sub);
+		}
 
-    @Override public Appendable append(CharSequence csq) throws IOException {
-      int length = csq.length();
-      if (length != 0) {
-        lastChar = csq.charAt(length - 1);
-      }
-      return delegate.append(csq);
-    }
-
-    @Override public Appendable append(CharSequence csq, int start, int end) throws IOException {
-      CharSequence sub = csq.subSequence(start, end);
-      return append(sub);
-    }
-
-    @Override public Appendable append(char c) throws IOException {
-      lastChar = c;
-      return delegate.append(c);
-    }
-  }
+		@Override
+		public Appendable append(char c) throws IOException {
+			this.lastChar = c;
+			return this.delegate.append(c);
+		}
+	}
 }
