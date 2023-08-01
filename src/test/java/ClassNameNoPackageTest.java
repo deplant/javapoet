@@ -16,7 +16,7 @@
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.squareup.javapoet.ClassName;
+import tech.deplant.javapoet.ClassName;
 import org.junit.Test;
 
 /**

@@ -122,6 +122,10 @@ checkstyle {
     ignoreFailures = true
 }
 
+tasks.withType(Checkstyle).configureEach {
+    exclude("**/module-info.java")
+}
+
 tasks.withType(Test) {
     systemProperty "file.encoding", "utf-8"
     javaLauncher = javaToolchains.launcherFor {
