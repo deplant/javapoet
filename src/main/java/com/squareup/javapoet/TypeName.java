@@ -120,17 +120,26 @@ public class TypeName {
 
 			@Override
 			public TypeName visitPrimitive(PrimitiveType t, Void p) {
-				return switch (t.getKind()) {
-					case BOOLEAN -> TypeName.BOOLEAN;
-					case BYTE -> TypeName.BYTE;
-					case SHORT -> TypeName.SHORT;
-					case INT -> TypeName.INT;
-					case LONG -> TypeName.LONG;
-					case CHAR -> TypeName.CHAR;
-					case FLOAT -> TypeName.FLOAT;
-					case DOUBLE -> TypeName.DOUBLE;
-					default -> throw new AssertionError();
-				};
+				switch (t.getKind()) {
+					case BOOLEAN:
+						return TypeName.BOOLEAN;
+					case BYTE:
+						return TypeName.BYTE;
+					case SHORT:
+						return TypeName.SHORT;
+					case INT:
+						return TypeName.INT;
+					case LONG:
+						return TypeName.LONG;
+					case CHAR:
+						return TypeName.CHAR;
+					case FLOAT:
+						return TypeName.FLOAT;
+					case DOUBLE:
+						return TypeName.DOUBLE;
+					default:
+						throw new AssertionError();
+				}
 			}
 
 			@Override
