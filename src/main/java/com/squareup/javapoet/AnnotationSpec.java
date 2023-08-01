@@ -118,8 +118,7 @@ public final class AnnotationSpec {
 			//   )
 			codeWriter.emit("@$T(" + whitespace, this.type);
 			codeWriter.indent(2);
-			for (Iterator<Map.Entry<String, List<CodeBlock>>> i
-			     = this.members.entrySet().iterator(); i.hasNext(); ) {
+			for (Iterator<Map.Entry<String, List<CodeBlock>>> i = this.members.entrySet().iterator(); i.hasNext(); ) {
 				Map.Entry<String, List<CodeBlock>> entry = i.next();
 				codeWriter.emit("$L = ", entry.getKey());
 				emitAnnotationValues(codeWriter, whitespace, memberSeparator, entry.getValue());
@@ -132,8 +131,10 @@ public final class AnnotationSpec {
 		}
 	}
 
-	private void emitAnnotationValues(CodeWriter codeWriter, String whitespace,
-	                                  String memberSeparator, List<CodeBlock> values) throws IOException {
+	private void emitAnnotationValues(CodeWriter codeWriter,
+	                                  String whitespace,
+	                                  String memberSeparator,
+	                                  List<CodeBlock> values) throws IOException {
 		if (values.size() == 1) {
 			codeWriter.indent(2);
 			codeWriter.emit(values.get(0));

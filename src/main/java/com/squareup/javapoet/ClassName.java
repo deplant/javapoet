@@ -58,15 +58,17 @@ public final class ClassName extends TypeName implements Comparable<ClassName> {
 		this(packageName, enclosingClassName, simpleName, Collections.emptyList());
 	}
 
-	private ClassName(String packageName, ClassName enclosingClassName, String simpleName,
+	private ClassName(String packageName,
+	                  ClassName enclosingClassName,
+	                  String simpleName,
 	                  List<AnnotationSpec> annotations) {
 		super(annotations);
 		this.packageName = Objects.requireNonNull(packageName, "packageName == null");
 		this.enclosingClassName = enclosingClassName;
 		this.simpleName = simpleName;
-		this.canonicalName = enclosingClassName != null
-				? (enclosingClassName.canonicalName + '.' + simpleName)
-				: (packageName.isEmpty() ? simpleName : packageName + '.' + simpleName);
+		this.canonicalName = enclosingClassName != null ? (enclosingClassName.canonicalName + '.' +
+		                                                   simpleName) : (packageName.isEmpty() ? simpleName :
+				packageName + '.' + simpleName);
 	}
 
 	public static ClassName get(Class<?> clazz) {
@@ -114,7 +116,8 @@ public final class ClassName extends TypeName implements Comparable<ClassName> {
 		ClassName className = null;
 		for (String simpleName : classNameString.substring(p).split("\\.", -1)) {
 			checkArgument(!simpleName.isEmpty() && Character.isUpperCase(simpleName.codePointAt(0)),
-			              "couldn't make a guess for %s", classNameString);
+			              "couldn't make a guess for %s",
+			              classNameString);
 			className = new ClassName(packageName, className, simpleName);
 		}
 
@@ -165,7 +168,9 @@ public final class ClassName extends TypeName implements Comparable<ClassName> {
 
 	@Override
 	public ClassName annotated(List<AnnotationSpec> annotations) {
-		return new ClassName(this.packageName, this.enclosingClassName, this.simpleName,
+		return new ClassName(this.packageName,
+		                     this.enclosingClassName,
+		                     this.simpleName,
 		                     concatAnnotations(annotations));
 	}
 
@@ -174,9 +179,8 @@ public final class ClassName extends TypeName implements Comparable<ClassName> {
 		if (!isAnnotated()) {
 			return this;
 		}
-		ClassName resultEnclosingClassName = this.enclosingClassName != null
-				? this.enclosingClassName.withoutAnnotations()
-				: null;
+		ClassName resultEnclosingClassName =
+				this.enclosingClassName != null ? this.enclosingClassName.withoutAnnotations() : null;
 		return new ClassName(this.packageName, resultEnclosingClassName, this.simpleName);
 	}
 
@@ -254,9 +258,9 @@ public final class ClassName extends TypeName implements Comparable<ClassName> {
 	 * Return the binary parameterName of a class.
 	 */
 	public String reflectionName() {
-		return this.enclosingClassName != null
-				? (this.enclosingClassName.reflectionName() + '$' + this.simpleName)
-				: (this.packageName.isEmpty() ? this.simpleName : this.packageName + '.' + this.simpleName);
+		return this.enclosingClassName != null ? (this.enclosingClassName.reflectionName() + '$' +
+		                                          this.simpleName) : (this.packageName.isEmpty() ? this.simpleName :
+				this.packageName + '.' + this.simpleName);
 	}
 
 	public List<String> simpleNames() {

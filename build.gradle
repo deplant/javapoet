@@ -1,0 +1,142 @@
+plugins {
+    id "java-library"
+    id "maven-publish"
+    id "signing"
+    id "net.ltgt.errorprone" version "3.1.0"
+    id "checkstyle"
+}
+
+group v_groupId
+version v_version
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+
+    // RUNTIME **************************
+
+
+    // TESTS **************************
+
+    // JUnit 4
+    testImplementation "junit:junit:$junitVersion"
+    testImplementation "com.google.testing.compile:compile-testing:$compileTestingVersion"
+    testImplementation "com.google.truth:truth:$compileTestingVersion"
+    testImplementation "com.google.jimfs:jimfs:1.2"
+    testImplementation "org.mockito:mockito-core:4.11.0"
+    testImplementation "org.eclipse.jdt.core.compiler:ecj:4.6.1"
+    errorprone "com.google.errorprone:error_prone_core:2.19.1"
+    checkstyle 'com.puppycrawl.tools:checkstyle:8.18'
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/" + v_repository)
+            credentials {
+                username = System.getenv("USERNAME")
+                password = System.getenv("GH_PACKAGES_UPLOAD_TOKEN")
+            }
+        }
+        maven {
+            name = "Sonatype"
+            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            credentials {
+                username = System.getenv("OSSRH_USERNAME")
+                password = System.getenv("OSSRH_PASSWORD")
+            }
+        }
+    }
+    publications {
+        gpr(MavenPublication) {
+            groupId = v_groupId
+            artifactId = v_artifactId
+            version = v_version
+
+            from components.java
+
+            pom {
+                name = v_artifactId
+                description = 'Use beautiful Java code to generate beautiful Java code.'
+                url = "https://github.com/" + v_repository
+//                properties = [
+//                        myProp          : "value",
+//                        "prop.with.dots": "anotherValue"
+//                ]
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = v_developerId
+                        name = v_developerName
+                        email = v_developerEmail
+                        organization = v_org
+                        organizationUrl = v_url
+                    }
+                }
+                scm {
+                    connection = "scm:git:git://github.com/" + v_repository + ".git"
+                    developerConnection = "scm:git:ssh://github.com/" + v_repository + ".git"
+                    url = "http://github.com/" + v_repository
+                }
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.gpr
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+tasks.withType(JavaExec).configureEach {
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+checkstyle {
+    toolVersion "8.17"
+    configFile = file("${projectDir}/checkstyle.xml")
+    ignoreFailures = true
+}
+
+tasks.withType(Test) {
+    systemProperty "file.encoding", "utf-8"
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+tasks.withType(Javadoc).configureEach {
+    javadocTool = javaToolchains.javadocToolFor {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+    failOnError false
+    options.addBooleanOption('html5', true)
+    options.addStringOption('encoding', 'UTF-8')
+    options.addStringOption('charSet', 'UTF-8')
+    options.addBooleanOption('-ignore-source-errors', true)
+    options.addStringOption('Xdoclint:none', '-quiet')
+}

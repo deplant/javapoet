@@ -60,8 +60,7 @@ public final class ArrayTypeName extends TypeName {
 		return get(mirror, new LinkedHashMap<>());
 	}
 
-	static ArrayTypeName get(
-			ArrayType mirror, Map<TypeParameterElement, TypeVariableName> typeVariables) {
+	static ArrayTypeName get(ArrayType mirror, Map<TypeParameterElement, TypeVariableName> typeVariables) {
 		return new ArrayTypeName(TypeName.get(mirror.getComponentType(), typeVariables));
 	}
 

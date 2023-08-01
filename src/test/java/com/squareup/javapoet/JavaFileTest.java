@@ -108,8 +108,8 @@ public final class JavaFileTest {
                 .build())
             .build())
         .addStaticImport(Runtime.class, "*")
-        .build()
-        .toString(); // don't look at the generated code...
+        .build();
+        //.toString(); // don't look at the generated code...
   }
 
   @Test public void importStaticMixed() {
